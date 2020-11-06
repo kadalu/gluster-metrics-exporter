@@ -12,4 +12,8 @@ dependencies:
     github: darwinnn/crometheus
     branch: master
 
+targets:
+  gluster-metrics:
+    main: src/gluster-metrics.cr
+
 license: Apache-2.0
