@@ -2,6 +2,7 @@ require "./args"
 require "./metrics_server"
 require "./metrics/volume"
 require "./metrics/glusterd"
+require "./metrics/peer"
 
 
 def enabled_metrics(args)
@@ -49,6 +50,10 @@ def main
 
     when "glusterd"
       GlusterdMetrics.register(args)
+
+    when "peer"
+      PeerMetrics.register(args)
+
     end
   end
 

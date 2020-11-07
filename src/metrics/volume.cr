@@ -3,13 +3,13 @@ require "crometheus"
 require "./metric"
 require "../metrics_server"
 
-class VolumeStatusMetrics < Metric
+class VolumeMetrics < Metric
   # Register the name
   MetricsServer.register_metric("volume")
 
   def self.register(args)
     # Initialize the Crometheus Metric
-    VolumeStatusMetrics.new(
+    VolumeMetrics.new(
       args,
       :volume,
       "Volume Metrics",
