@@ -1,11 +1,14 @@
 require "option_parser"
+require "yaml"
 
 PROGNAME = "gluster-metrics"
 VERSION = {{ env("VERSION") || "-" }}
 
 struct Config
+  include YAML::Serializable
+
   property metrics_path = "/metrics",
-           port = 9100,
+           port = 9713,
            cluster_metrics_path = "/clustermetrics",
            disable_volumes_all = false,
            gluster_executable_path = "/usr/sbin/gluster",
@@ -29,9 +32,10 @@ end
 
 def parsed_args
   config = Config.new
+  config_file = ""
 
   parser = OptionParser.new do |parser|
-    parser.banner = "Usage: gluster-metrics [OPTIONS]"
+    parser.banner = "Usage: #{PROGNAME} [OPTIONS]"
 
     parser.on("--metrics-path=URL", "Metrics Path (default: #{config.metrics_path})") do |url|
       config.metrics_path = url
@@ -138,6 +142,16 @@ def parsed_args
 
     parser.parse
 
+  end
+
+  # Config file takes highest priority
+  if config_file != ""
+    if !File.exists?(config_file)
+      STDERR.puts "Invalid Config file Path"
+      exit 1
+    end
+
+    config = Config.from_yaml(File.read(config_file))
   end
 
   # TODO: Validate config

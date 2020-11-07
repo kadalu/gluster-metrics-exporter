@@ -1,0 +1,57 @@
+## Metrics Path used to export Node, Client and other
+## metrics from Every node
+# metrics_path: "/metrics"
+
+## Exporter Port
+# port: 9713
+
+## Exporter URL to export Cluster metrics that
+## are collected by running Gluster CLI commands
+# cluster_metrics_path: "/clustermetrics"
+
+## Disable all Volumes
+# disable_volumes_all: false
+
+## Gluster executable Path to run Gluster commands
+# gluster_executable_path: "/usr/sbin/gluster"
+
+## Disable all Metrics
+# disable_all_metrics: false
+
+## Log Level
+# log_level: "info"
+
+## Log directory
+# log_dir: "/var/log/glusterfs-metrics"
+
+## Log file
+# log_file: "exporter.log"
+
+## Glusterd directory, to get any local info like Node ID
+# glusterd_dir: "/var/lib/glusterd"
+
+## Gluster CLI Socket Path
+# gluster_cli_socket_path: ""
+
+## Verbose Output
+# verbose: false
+
+## List of disabled Volume Names
+# disabled_volumes: []
+
+## List of Enabled Volumes
+# enabled_volumes: []
+
+## List of Disabled Metric groups
+# disabled_metrics: []
+
+## List of Enabled Metric groups
+# enabled_metrics: []
+
+## Cluster Name label to include in all the metrics
+## Since Gluster doesn't have one.
+cluster_name: "c1"
+
+## Gluster Host name to replace localhost references in
+## some Gluster commands like pool list
+gluster_host: "node1.example.com"
