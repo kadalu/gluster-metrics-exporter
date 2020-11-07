@@ -1,7 +1,8 @@
 require "./args"
 require "./metrics_server"
-require "./metrics/volume_status"
+require "./metrics/volume"
 require "./metrics/glusterd"
+
 
 def enabled_metrics(args)
   metrics = [] of String
@@ -24,6 +25,7 @@ def enabled_metrics(args)
   metrics
 end
 
+
 def main
   args = parsed_args
 
@@ -42,8 +44,8 @@ def main
   metrics_list.each do |metric|
     case metric
 
-    when "volume_status"
-      VolumeStatusMetrics.register(args)
+    when "volume"
+      VolumeMetrics.register(args)
 
     when "glusterd"
       GlusterdMetrics.register(args)

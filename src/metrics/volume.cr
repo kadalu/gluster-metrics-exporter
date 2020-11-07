@@ -5,7 +5,7 @@ require "../metrics_server"
 
 class VolumeStatusMetrics < Metric
   # Register the name
-  MetricsServer.register_metric("volume_status")
+  MetricsServer.register_metric("volume")
 
   def self.register(args)
     # Initialize the Crometheus Metric
