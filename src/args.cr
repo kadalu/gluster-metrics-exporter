@@ -154,6 +154,16 @@ def parsed_args
     config = Config.from_yaml(File.read(config_file))
   end
 
+  if config.cluster_name == ""
+    STDERR.puts "`--cluster=<NAME>` is required to differenciate metrics from multiple Clusters"
+    exit 1
+  end
+
+  if config.gluster_host == ""
+    STDERR.puts "--gluster-host=<HOST> is required. This hostname will be used to replace the localhost references from a few Gluster commands(Like pool list)."
+    exit 1
+  end
+
   # TODO: Validate config
   config
 end
