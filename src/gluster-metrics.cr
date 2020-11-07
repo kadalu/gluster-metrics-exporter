@@ -1,6 +1,7 @@
 require "./args"
 require "./metrics_server"
 require "./metrics/volume_status"
+require "./metrics/glusterd"
 
 def enabled_metrics(args)
   metrics = [] of String
@@ -43,6 +44,9 @@ def main
 
     when "volume_status"
       VolumeStatusMetrics.register(args)
+
+    when "glusterd"
+      GlusterdMetrics.register(args)
     end
   end
 
