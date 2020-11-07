@@ -1,4 +1,3 @@
-PROGNAME = "gluster-metrics"
-VERSION = {{ env("VERSION") || "-" }}
+require "./args"
 
-puts "#{PROGNAME} #{VERSION}"
+puts parsed_args
