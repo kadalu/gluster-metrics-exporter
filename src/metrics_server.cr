@@ -4,6 +4,7 @@ require "crometheus"
 
 module MetricsServer
   @@cluster_metrics_registry = Crometheus::Registry.new(false)
+  @@all_metrics = [] of String
 
   def self.default_registry
     Crometheus.default_registry
@@ -11,6 +12,14 @@ module MetricsServer
 
   def self.cluster_metrics_registry
     @@cluster_metrics_registry
+  end
+
+  def self.all_metrics
+    @@all_metrics
+  end
+
+  def self.register_metric(name : String)
+    @@all_metrics << name
   end
 
   def self.start(args)
