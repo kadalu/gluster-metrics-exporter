@@ -1,4 +1,4 @@
-name: gluster-metrics
+name: gluster-metrics-exporter
 version: 0.1.0
 
 authors:
@@ -13,7 +13,7 @@ dependencies:
     branch: master
 
 targets:
-  gluster-metrics:
-    main: src/gluster-metrics.cr
+  gluster-metrics-exporter:
+    main: src/gluster-metrics-exporter.cr
 
 license: Apache-2.0

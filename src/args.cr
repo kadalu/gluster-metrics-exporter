@@ -1,7 +1,7 @@
 require "option_parser"
 require "yaml"
 
-PROGNAME = "gluster-metrics"
+PROGNAME = "gluster-metrics-exporter"
 VERSION = {{ env("VERSION") || "-" }}
 
 struct Config
