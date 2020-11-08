@@ -3,10 +3,7 @@ require "xml"
 
 require "./metric"
 require "../metrics_server"
-
-struct Peer
-  property id = "", host = "", state = 0.0
-end
+require "./gluster_commands"
 
 class PeerMetrics < Metric
   # Register the name
@@ -22,38 +19,8 @@ class PeerMetrics < Metric
     )
   end
 
-  def peers_state()
-    rc, resp = execute_cmd(@args.gluster_executable_path, ["pool", "list", "--xml"])
-    # TODO: Log error if rc != 0
-    return [] of Peer if rc != 0
-
-    document = XML.parse(resp)
-
-    prs = document.xpath_nodes("//peerStatus/peer")
-
-    peers = [] of Peer
-    prs.each do |pr|
-      peer = Peer.new
-      pr.children.each do |ele|
-        case ele.name
-        when "uuid"
-          peer.id = ele.content.strip
-        when "hostname"
-          peer.host = ele.content.strip
-        when "connected"
-          peer.state = ele.content.strip.to_f
-
-        end
-      end
-
-      peers << peer
-    end
-
-    peers
-  end
-
   def samples : Nil
-    peers = peers_state
+    peers = GlusterCommands.pool_list(@args)
 
     # Number of Peers
     yield Crometheus::Sample.new(
@@ -66,11 +33,11 @@ class PeerMetrics < Metric
     peers.each do |peer|
       # If Peer hostname is localhost then replace it with
       # the gluster_host argument passed
-      host = peer.host == "localhost" ? @args.gluster_host : peer.host
+      host = peer.hostname == "localhost" ? @args.gluster_host : peer.hostname
 
       yield Crometheus::Sample.new(
         peer.state,
-        labels: {:cluster => @args.cluster_name, :host => host},
+        labels: {:cluster => @args.cluster_name, :hostname => host},
         suffix: "state"
       )
     end
