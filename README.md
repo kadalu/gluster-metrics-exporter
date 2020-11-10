@@ -5,31 +5,31 @@
 Download the latest release with the command
 
 ```
-curl -LO https://github.com/kadalu/gluster-metrics/releases/download/0.1.0/gluster-metrics
+curl -LO https://github.com/kadalu/gluster-metrics/releases/download/0.1.0/gluster-metrics-exporter
 ```
 
-Make the `gluster-metrics` binary executable.
+Make the `gluster-metrics-exporter` binary executable.
 
 ```
-chmod +x ./gluster-metrics
+chmod +x ./gluster-metrics-exporter
 ```
 
 Move the binary in to your PATH.
 
 ```
-sudo mv ./gluster-metrics /usr/local/bin/gluster-metrics
+sudo mv ./gluster-metrics-exporter /usr/local/bin/gluster-metrics-exporter
 ```
 
 Test to ensure the version you installed is up-to-date
 
 ```
-$ gluster-metrics --version
+$ gluster-metrics-exporter --version
 ```
 
 ## Usage:
 
 ```
-Usage: gluster-metrics [OPTIONS]
+Usage: gluster-metrics-exporter [OPTIONS]
     --metrics-path=URL               Metrics Path (default: /metrics)
     --cluster-metrics-path=URL       Cluster Metrics Path (default: /clustermetrics)
     -p PORT, --port=PORT             Exporter Port (default: 9713)

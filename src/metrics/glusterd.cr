@@ -27,7 +27,7 @@ class GlusterdMetrics < Metric
     vsz = parts[3].strip.to_f * 1024
     uptime = parts[4].strip.to_f
 
-    labels = {:cluster => @args.cluster_name, :node => @args.gluster_host}
+    labels = {:cluster => @args.cluster_name, :hostname => @args.gluster_host}
     yield Crometheus::Sample.new(pcpu, labels: labels, suffix: "cpu_percentage")
     yield Crometheus::Sample.new(pmem, labels: labels, suffix: "memory_percentage")
     yield Crometheus::Sample.new(rsz, labels: labels, suffix: "resident_memory_bytes")
