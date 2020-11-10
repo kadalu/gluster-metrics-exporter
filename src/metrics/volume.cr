@@ -30,20 +30,14 @@ class VolumeMetrics < Metric
     grouped_data.each do |key, value|
       yield Crometheus::Sample.new(
         value.size.to_f,
-        labels: {:cluster => @args.cluster_name, :state => key[0], :type => key[1]},
+        labels: {:cluster => @args.cluster_name,
+                 :state => key[0],
+                 :type => key[1]},
         suffix: "count"
       )
     end
 
     volumes.each do |volume|
-      # TODO: Merge Volume Status to show meaningful health
-      state = volume.state == "Started" ? 1.0 : 0.0
-      yield Crometheus::Sample.new(
-        state,
-        labels: {:cluster => @args.cluster_name, :state => volume.state},
-        suffix: "state"
-      )
-
       yield Crometheus::Sample.new(
         volume.distribute_count.to_f,
         labels: {:cluster => @args.cluster_name, :name => volume.name},
@@ -88,7 +82,8 @@ class VolumeMetrics < Metric
         suffix: "subvol_count"
       )
 
-      # volume_health (0 - Not Started, 1 - Down, 2 - Degraded, 3 - Partial, 4 - Up)
+      # volume_health (0 - Not Started, 1 - Down,
+      # 2 - Degraded, 3 - Partial, 4 - Up)
       yield Crometheus::Sample.new(
         health_to_value(volume.state, volume.health),
         labels: {:cluster => @args.cluster_name,
@@ -96,6 +91,15 @@ class VolumeMetrics < Metric
                  :type => volume.type,
                  :state => volume.state},
         suffix: "health"
+      )
+
+      yield Crometheus::Sample.new(
+        volume.up_subvols.to_f,
+        labels: {:cluster => @args.cluster_name,
+                 :name => volume.name,
+                 :type => volume.type,
+                 :state => volume.state},
+        suffix: "up_subvols"
       )
 
       yield Crometheus::Sample.new(
@@ -155,11 +159,14 @@ class VolumeMetrics < Metric
       volume.subvols.each_with_index do |subvol, sidx|
         yield Crometheus::Sample.new(
           subvol.bricks.size.to_f,
-          labels: {:cluster => @args.cluster_name, :name => volume.name, :subvol_index => "#{sidx}"},
+          labels: {:cluster => @args.cluster_name,
+                   :name => volume.name,
+                   :subvol_index => "#{sidx}"},
           suffix: "subvol_brick_count"
         )
 
-        # volume_subvol_health (0 - Not Started, 1 - Down, 2 - Degraded, 3 - Partial, 4 - Up)
+        # volume_subvol_health (0 - Not Started, 1 - Down,
+        # 2 - Degraded, 3 - Partial, 4 - Up)
         yield Crometheus::Sample.new(
           health_to_value(volume.state, subvol.health),
           labels: {:cluster => @args.cluster_name,
@@ -168,6 +175,16 @@ class VolumeMetrics < Metric
                    :type => subvol.type,
                    :subvol_index => "#{sidx}"},
           suffix: "subvol_health"
+        )
+
+        yield Crometheus::Sample.new(
+          subvol.up_bricks.to_f,
+          labels: {:cluster => @args.cluster_name,
+                   :name => volume.name,
+                   :state => volume.state,
+                   :type => subvol.type,
+                   :subvol_index => "#{sidx}"},
+          suffix: "subvol_up_bricks"
         )
 
         yield Crometheus::Sample.new(
