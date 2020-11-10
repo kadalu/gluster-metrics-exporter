@@ -51,6 +51,7 @@ module GlusterCommands
              inodes_free = 0.0,
              size_used = 0.0,
              inodes_used = 0.0,
+             up_bricks = 0,
              bricks = [] of Brick
   end
 
@@ -74,6 +75,7 @@ module GlusterCommands
              inodes_free = 0.0,
              size_used = 0.0,
              inodes_used = 0.0,
+             up_subvols = 0,
              subvols = [] of Subvolume,
              bricks = [] of Brick,
              options = {} of String => String
@@ -93,8 +95,7 @@ module GlusterCommands
 
     prs = document.xpath_nodes("//peerStatus/peer")
 
-    peers = [] of Peer
-    prs.each do |pr|
+    prs.map do |pr|
       peer = Peer.new
       pr.children.each do |ele|
         case ele.name
@@ -108,10 +109,8 @@ module GlusterCommands
         end
       end
 
-      peers << peer
+      peer
     end
-
-    peers
   end
 
   def self.brick_status(args)
@@ -124,8 +123,8 @@ module GlusterCommands
     document = XML.parse(resp)
 
     bricks_data = document.xpath_nodes("//volStatus/volumes/volume/node")
-    bricks = [] of Brick
-    bricks_data.each do |brk|
+
+    bricks_data.map do |brk|
       brick = Brick.new
       brk.children.each do |ele|
         case ele.name
@@ -161,10 +160,8 @@ module GlusterCommands
       brick.size_used = brick.size_total - brick.size_free
       brick.inodes_used = brick.inodes_total - brick.inodes_free
 
-      bricks << brick
+      brick
     end
-
-    bricks
   end
 
   def self.volume_info(args)
@@ -177,8 +174,7 @@ module GlusterCommands
 
     vols = document.xpath_nodes("//volume")
 
-    volumes = [] of Volume
-    vols.each do |vol|
+    vols.map do |vol|
       volume = Volume.new
       vol.children.each do |ele|
         case ele.name
@@ -245,180 +241,204 @@ module GlusterCommands
         volume.options[optname] = optvalue
       end
 
-      volumes << volume
+      volume
     end
-
-    volumes
   end
 
   private def self.update_brick_status(volumes, bricks_status)
+    # Update each brick's status from Volume status output
+
+    # Create hashmap of Bricks data so that it
+    # helps to lookup later.
     tmp_brick_status = {} of String => Brick
     bricks_status.each do |brick|
       tmp_brick_status["#{brick.node.hostname}:#{brick.path}"] = brick
     end
 
-    outvolumes = [] of Volume
-    volumes.each do |volume|
-      volume.bricks.each do |brick|
-        data = tmp_brick_status["#{brick.node.hostname}:#{brick.path}"]?
-        if !data.nil?
-          brick.state = data.state
-          brick.pid = data.pid
-          brick.size_total = data.size_total
-          brick.size_free = data.size_free
-          brick.size_used = data.size_used
-          brick.inodes_total = data.inodes_total
-          brick.inodes_free = data.inodes_free
-          brick.inodes_used = data.inodes_used
-          brick.device = data.device
-          brick.block_size = data.block_size
-          brick.mnt_options = data.mnt_options
-          brick.fs_name = data.fs_name
-        end
-      end
-    end
+    volumes.map do |volume|
+      volume.subvols = volume.subvols.map do |subvol|
+        subvol.bricks = volume.bricks.map do |brick|
+          # Update brick status info if volume status output
+          # contains respective brick info. Sometimes volume
+          # status skips brick entries if glusterd of respective
+          # node is not reachable or down(Offline).
+          data = tmp_brick_status["#{brick.node.hostname}:#{brick.path}"]?
+          if !data.nil?
+            brick.state = data.state
+            brick.pid = data.pid
+            brick.size_total = data.size_total
+            brick.size_free = data.size_free
+            brick.size_used = data.size_used
+            brick.inodes_total = data.inodes_total
+            brick.inodes_free = data.inodes_free
+            brick.inodes_used = data.inodes_used
+            brick.device = data.device
+            brick.block_size = data.block_size
+            brick.mnt_options = data.mnt_options
+            brick.fs_name = data.fs_name
+          end
 
-    volumes
+          brick
+        end
+
+        subvol
+      end
+
+      volume
+    end
   end
 
+  # Group bricks into subvolumes
   private def self.group_subvols(volumes)
-    volumes.each_with_index do |volume, idx|
+    volumes.map do |volume|
+      # "Distributed Replicate" will become "Replicate"
       subvol_type = volume.type.split(" ")[-1]
       subvol_bricks_count = volume.bricks.size / volume.distribute_count
 
-      (0...volume.distribute_count).each do |sidx|
+      # Divide the bricks list as subvolumes
+      subvol_bricks = [] of Array(Brick)
+      volume.bricks.each_slice(subvol_bricks_count.to_i) do |grp|
+        subvol_bricks << grp
+      end
+
+      volume.subvols = (0...volume.distribute_count).map do |sidx|
         subvol = Subvolume.new
         subvol.type = subvol_type
         subvol.replica_count = volume.replica_count
         subvol.disperse_count = volume.disperse_count
         subvol.disperse_redundancy_count = volume.disperse_redundancy_count
+        subvol.bricks = subvol_bricks[sidx]
 
-        volume.subvols << subvol
+        subvol
       end
 
-      sidx = 0
-      volume.bricks.each_slice(subvol_bricks_count.to_i) do |grp|
-        volume.subvols[sidx].bricks = grp
-        sidx += 1
-      end
+      volume
     end
-
-    volumes
   end
 
-  private def self.subvol_health(subvol)
-    up_bricks = 0
+  private def self.update_subvol_health(subvol)
+    subvol.up_bricks = 0
     subvol.bricks.each do |brick|
-      up_bricks += 1 if brick.state == 1.0
+      subvol.up_bricks += 1 if brick.state == 1.0
     end
 
-    health = HEALTH_UP
-    if subvol.bricks.size != up_bricks
-      health = HEALTH_DOWN
-      if subvol.type == TYPE_REPLICATE && up_bricks >= (subvol.replica_count/2).ceil
-        health = HEALTH_PARTIAL
+    subvol.health = HEALTH_UP
+    if subvol.bricks.size != subvol.up_bricks
+      subvol.health = HEALTH_DOWN
+      if subvol.type == TYPE_REPLICATE && subvol.up_bricks >= (subvol.replica_count/2).ceil
+        subvol.health = HEALTH_PARTIAL
       end
       # If down bricks are less than or equal to redudancy count
       # then Volume is UP but some bricks are down
-      if subvol.type == TYPE_DISPERSE && (subvol.bricks.size - up_bricks) <= subvol.disperse_redundancy_count
-        health = HEALTH_PARTIAL
+      if subvol.type == TYPE_DISPERSE && (subvol.bricks.size - subvol.up_bricks) <= subvol.disperse_redundancy_count
+        subvol.health = HEALTH_PARTIAL
       end
     end
 
-    health
+    subvol
   end
 
+  # Update Volume health based on subvolume health
   private def self.update_volume_health(volumes)
-    volumes.each do |volume|
-      next if volume.state != STATE_STARTED
+    volumes.map do |volume|
+      if volume.state == STATE_STARTED
+        volume.health = HEALTH_UP
+        volume.up_subvols = 0
 
-      volume.health = HEALTH_UP
-      up_subvols = 0
+        volume.subvols = volume.subvols.map do |subvol|
+          # Update Subvolume health based on bricks health
+          subvol = update_subvol_health(subvol)
 
-      volume.subvols.each do |subvol|
-        subvol.health = subvol_health(subvol)
-        if subvol.health == HEALTH_DOWN
-          volume.health = HEALTH_DEGRADED
+          # One subvol down means the Volume is degraded
+          if subvol.health == HEALTH_DOWN
+            volume.health = HEALTH_DEGRADED
+          end
+
+          # If Volume is not yet degraded, then it
+          # may be same as subvolume health
+          if subvol.health == HEALTH_PARTIAL && volume.health != HEALTH_DEGRADED
+            volume.health = subvol.health
+          end
+
+          if subvol.health != HEALTH_DOWN
+            volume.up_subvols += 1
+          end
+
+          subvol
         end
-        if subvol.health == HEALTH_PARTIAL && volume.health != HEALTH_DEGRADED
-          volume.health = subvol.health
-        end
 
-        if subvol.health != HEALTH_DOWN
-          up_subvols += 1
+        if volume.up_subvols == 0
+          volume.health = HEALTH_DOWN
         end
       end
 
-      if up_subvols == 0
-        volume.health = HEALTH_DOWN
-      end
+      volume
     end
-
-    volumes
   end
 
   private def self.update_volume_utilization(volumes)
-    volumes.each do |volume|
-      volume.subvols.each do |subvol|
-        effective_capacity_used = 0
-        effective_capacity_total = 0
-        effective_inodes_used = 0
-        effective_inodes_total = 0
+    volumes.map do |volume|
+      volume.subvols = volume.subvols.map do |subvol|
+        subvol.size_used = 0.0
+        subvol.size_total = 0.0
+        subvol.inodes_used = 0.0
+        subvol.inodes_total = 0.0
 
+        # Subvolume utilization
         subvol.bricks.each do |brick|
           next if brick.type == "Arbiter"
 
-          if brick.size_used >= effective_capacity_used
-            effective_capacity_used = brick.size_used
-          end
+          subvol.size_used = brick.size_used if brick.size_used >= subvol.size_used
 
-          if effective_capacity_total == 0 ||
-             (brick.size_total <= effective_capacity_total &&
+          if subvol.size_total == 0 ||
+             (brick.size_total <= subvol.size_total &&
               brick.size_total > 0)
-            effective_capacity_total = brick.size_total
+            subvol.size_total = brick.size_total
           end
 
-          if brick.inodes_used >= effective_inodes_used
-            effective_inodes_used = brick.inodes_used
-          end
+          subvol.inodes_used = brick.inodes_used if brick.inodes_used >= subvol.inodes_used
 
-          if effective_inodes_total == 0 ||
-             (brick.inodes_total <= effective_inodes_total &&
+          if subvol.inodes_total == 0 ||
+             (brick.inodes_total <= subvol.inodes_total &&
               brick.inodes_total > 0)
-            effective_inodes_total = brick.inodes_total
+            subvol.inodes_total = brick.inodes_total
           end
         end
 
+        # Subvol Size = Sum of size of Data bricks
         if subvol.type == TYPE_DISPERSE
-          # Subvol Size = Sum of size of Data bricks
-          effective_capacity_used = effective_capacity_used * (
+          subvol.size_used = subvol.size_used * (
             subvol.disperse_count - subvol.disperse_redundancy_count)
 
-          effective_capacity_total = effective_capacity_total * (
+          subvol.size_total = subvol.size_total * (
             subvol.disperse_count - subvol.disperse_redundancy_count)
 
-          effective_inodes_used = effective_inodes_used * (
+          subvol.inodes_used = subvol.inodes_used * (
             subvol.disperse_count - subvol.disperse_redundancy_count)
 
-          effective_inodes_total = effective_inodes_total * (
+          subvol.inodes_total = subvol.inodes_total * (
             subvol.disperse_count - subvol.disperse_redundancy_count)
         end
-        volume.size_total += effective_capacity_total
-        volume.size_used += effective_capacity_used
-        volume.size_free = volume.size_total - volume.size_used
-        volume.inodes_total += effective_inodes_total
-        volume.inodes_used += effective_inodes_used
-        volume.inodes_free = volume.inodes_total - volume.inodes_used
-      end
-    end
 
-    volumes
+        # Aggregated volume utilization
+        volume.size_total += subvol.size_total
+        volume.size_used += subvol.size_used
+        volume.size_free = volume.size_total - volume.size_used
+        volume.inodes_total += subvol.inodes_total
+        volume.inodes_used += subvol.inodes_used
+        volume.inodes_free = volume.inodes_total - volume.inodes_used
+
+        subvol
+      end
+
+      volume
+    end
   end
 
   def self.volume_status(volinfo, args)
     bricks_data = brick_status(args)
-    volumes = update_brick_status(volinfo, bricks_data)
-    volumes = group_subvols(volumes)
+    volumes = group_subvols(volinfo)
+    volumes = update_brick_status(volumes, bricks_data)
     volumes = update_volume_utilization(volumes)
     update_volume_health(volumes)
   end
