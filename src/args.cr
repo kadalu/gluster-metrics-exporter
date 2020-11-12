@@ -33,6 +33,7 @@ end
 def parsed_args
   config = Config.new
   config_file = ""
+  default_gluster_host = `hostname`.strip
 
   parser = OptionParser.new do |parser|
     parser.banner = "Usage: #{PROGNAME} [OPTIONS]"
@@ -53,7 +54,7 @@ def parsed_args
       config.cluster_name = name
     end
 
-    parser.on("--gluster-host=NAME", "Gluster Host to replace `localhost` from the peer command output") do |name|
+    parser.on("--gluster-host=NAME", "Gluster Host to replace `localhost` from the peer command output (default: #{default_gluster_host})") do |name|
       config.gluster_host = name
     end
 
