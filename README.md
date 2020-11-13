@@ -5,15 +5,7 @@
 Download the latest release with the command
 
 ```
-curl -LO https://github.com/kadalu/gluster-metrics-exporter/releases/download/0.1.1/gluster-metrics-exporter-`uname -m | sed 's|aarch64|arm64|' | sed 's|x86_64|amd64|'`.tar.gz
-```
-
-Extract the binary,
-
-```
-arch=`uname -m | sed 's|aarch64|arm64|' | sed 's|x86_64|amd64|'`
-tar xvf gluster-metrics-exporter-${arch}.tar.gz
-mv gluster-metrics-exporter-${arch} gluster-metrics-exporter
+curl -L https://github.com/kadalu/gluster-metrics-exporter/releases/download/0.1.1/gluster-metrics-exporter-`uname -m | sed 's|aarch64|arm64|' | sed 's|x86_64|amd64|'` -o gluster-metrics-exporter
 ```
 
 Make the `gluster-metrics-exporter` binary executable.
