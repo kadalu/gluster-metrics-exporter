@@ -1,5 +1,5 @@
 name: gluster-metrics-exporter
-version: 0.1.0
+version: 0.2.0
 
 authors:
   - Kadalu.io <engineering@kadalu.io>
@@ -11,6 +11,12 @@ dependencies:
   crometheus:
     github: darwinnn/crometheus
     branch: master
+
+  kemal:
+    github: kemalcr/kemal
+
+  glustercli:
+    github: aravindavk/glustercli-crystal
 
 targets:
   gluster-metrics-exporter:

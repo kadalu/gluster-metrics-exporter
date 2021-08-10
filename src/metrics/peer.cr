@@ -1,45 +1,29 @@
-require "crometheus"
-require "xml"
+module GlusterMetricsExporter
+  Crometheus.alias PeerCountGauge = Crometheus::Gauge[:cluster]
+  Crometheus.alias PeerGauge = Crometheus::Gauge[:cluster, :hostname]
 
-require "./metric"
-require "../metrics_server"
-require "./gluster_commands"
+  @@peer_count = PeerCountGauge.new(:peer_count, "Number of Peers")
+  @@peer_state = PeerGauge.new(:peer_state, "State of Peer")
 
-class PeerMetrics < Metric
-  # Register the name
-  MetricsServer.register_metric("peer")
-
-  def self.register(args)
-    # Initialize the Crometheus Metric
-    PeerMetrics.new(
-      args,
-      :peer,
-      "Peer Count, State Metrics",
-      register_with: MetricsServer.cluster_metrics_registry
-    )
+  def self.clear_peer_metrics
+    @@peer_count.clear
+    @@peer_state.clear
   end
 
-  def samples : Nil
-    peers = GlusterCommands.pool_list(@args)
+  handle_metrics(["peer"]) do |metrics_data|
+    # Reset all Metrics to avoid stale data. Careful if
+    # counter type is used
+    clear_peer_metrics
 
-    # Number of Peers
-    yield Crometheus::Sample.new(
-      peers.size.to_f,
-      labels: {:cluster => @args.cluster_name},
-      suffix: "count"
-    )
+    # If Peer Metrics are not enabled
+    next if !@@config.enabled?("peer")
 
-    # Peer State 1 => Connected, 0 => Disconnected/Unknown
-    peers.each do |peer|
-      # If Peer hostname is localhost then replace it with
-      # the gluster_host argument passed
-      host = peer.hostname == "localhost" ? @args.gluster_host : peer.hostname
+    @@peer_count[cluster: @@config.cluster_name].set(metrics_data.peers.size)
 
-      yield Crometheus::Sample.new(
-        peer.state,
-        labels: {:cluster => @args.cluster_name, :hostname => host},
-        suffix: "state"
-      )
+    metrics_data.peers.each do |peer|
+      # Peer State 1 => Connected, 0 => Disconnected/Unknown
+      state = peer.connected ? 1 : 0
+      @@peer_state[cluster: @@config.cluster_name, hostname: peer.hostname].set(state)
     end
   end
 end

@@ -1,355 +1,186 @@
-require "crometheus"
+module GlusterMetricsExporter
+  Crometheus.alias VolumeCountGauge = Crometheus::Gauge[:cluster, :type, :state]
+  Crometheus.alias VolumeGauge = Crometheus::Gauge[:cluster, :type, :state, :name]
+  Crometheus.alias SubvolumeGauge = Crometheus::Gauge[:cluster, :volume_type, :volume_state, :volume_name, :subvol_index]
+  Crometheus.alias BrickGauge = Crometheus::Gauge[:cluster, :volume_type, :volume_state, :volume_name, :subvol_index, :hostname, :path]
 
-require "./metric"
-require "../metrics_server"
-require "./gluster_commands"
+  @@volume_count = VolumeCountGauge.new(:volume_count, "Number of Volumes")
+  @@dist_count = VolumeGauge.new(:volume_distribute_count, "Distribute Count")
+  @@brick_count = VolumeGauge.new(:volume_brick_count, "Number of bricks")
+  @@snap_count = VolumeGauge.new(:volume_snapshot_count, "Number of Snapshots")
+  @@replica_count = VolumeGauge.new(:volume_replica_count, "Replica Count")
+  @@arbiter_count = VolumeGauge.new(:volume_arbiter_count, "Arbiter Count")
+  @@disperse_count = VolumeGauge.new(:volume_disperse_count, "Disperse Count")
+  @@subvol_count = VolumeGauge.new(:volume_subvol_count, "Number of Subvolumes")
+  @@health = VolumeGauge.new(:volume_health, "Volume Health")
+  @@up_subvols = VolumeGauge.new(:volume_up_subvols, "Number of Up Subvolumes")
+  @@size_used = VolumeGauge.new(:volume_capacity_used_bytes, "Capacity Used Bytes")
+  @@size_free = VolumeGauge.new(:volume_capacity_free_bytes, "Capacity Free Bytes")
+  @@size_total = VolumeGauge.new(:volume_capacity_bytes, "Capacity Total Bytes")
+  @@inodes_used = VolumeGauge.new(:volume_inodes_used_count, "Inodes Used Count")
+  @@inodes_free = VolumeGauge.new(:volume_inodes_free_count, "Inodes Free Count")
+  @@inodes_total = VolumeGauge.new(:volume_inodes_count, "Inodes Total Count")
 
-class VolumeMetrics < Metric
-  # Register the name
-  MetricsServer.register_metric("volume")
+  @@subvol_brick_count = SubvolumeGauge.new(:subvol_brick_count, "Subvolume Bricks Count")
+  @@subvol_health = SubvolumeGauge.new(:subvol_health, "Subvolume Health")
+  @@subvol_up_bricks = SubvolumeGauge.new(:subvol_up_bricks, "Subvolume Up Bricks")
+  @@subvol_size_used = SubvolumeGauge.new(:subvol_capacity_used_bytes, "Subvolume Capacity Used Bytes")
+  @@subvol_size_free = SubvolumeGauge.new(:subvol_capacity_free_bytes, "Subvolume Capacity Free Bytes")
+  @@subvol_size_total = SubvolumeGauge.new(:subvol_capacity_bytes, "Subvolume Capacity Total Bytes")
+  @@subvol_inodes_used = SubvolumeGauge.new(:subvol_inodes_used_count, "Subvolume Inodes Used Count")
+  @@subvol_inodes_free = SubvolumeGauge.new(:subvol_inodes_free_count, "Subvolume Inodes Free Count")
+  @@subvol_inodes_total = SubvolumeGauge.new(:subvol_inodes_count, "Subvolume Inodes Total Count")
 
-  def self.register(args)
-    # Initialize the Crometheus Metric
-    VolumeMetrics.new(
-      args,
-      :volume,
-      "Volume Metrics",
-      register_with: MetricsServer.cluster_metrics_registry
-    )
+  @@brick_health = BrickGauge.new(:brick_health, "Brick Health")
+  @@brick_size_used = BrickGauge.new(:brick_capacity_used_bytes, "Brick Capacity Used Bytes")
+  @@brick_size_free = BrickGauge.new(:brick_capacity_free_bytes, "Brick Capacity Free Bytes")
+  @@brick_size_total = BrickGauge.new(:brick_capacity_bytes, "Brick Capacity Total Bytes")
+  @@brick_inodes_used = BrickGauge.new(:brick_inodes_used_count, "Brick Inodes Used Count")
+  @@brick_inodes_free = BrickGauge.new(:brick_inodes_free_count, "Brick Inodes Free Count")
+  @@brick_inodes_total = BrickGauge.new(:brick_inodes_count, "Brick Inodes Total Count")
+
+  def self.clear_volume_metrics
+    @@volume_count.clear
+    @@dist_count.clear
+    @@brick_count.clear
+    @@snap_count.clear
+    @@replica_count.clear
+    @@arbiter_count.clear
+    @@disperse_count.clear
+    @@subvol_count.clear
+    @@health.clear
+    @@up_subvols.clear
+    @@size_used.clear
+    @@size_free.clear
+    @@size_total.clear
+    @@inodes_used.clear
+    @@inodes_free.clear
+    @@inodes_total.clear
+    @@subvol_brick_count.clear
+    @@subvol_health.clear
+    @@subvol_up_bricks.clear
+    @@subvol_size_used.clear
+    @@subvol_size_free.clear
+    @@subvol_size_total.clear
+    @@subvol_inodes_used.clear
+    @@subvol_inodes_free.clear
+    @@subvol_inodes_total.clear
+    @@brick_health.clear
+    @@brick_size_used.clear
+    @@brick_size_free.clear
+    @@brick_size_total.clear
+    @@brick_inodes_used.clear
+    @@brick_inodes_free.clear
+    @@brick_inodes_total.clear
   end
 
-  def samples : Nil
-    volumes = GlusterCommands.volume_info(@args)
-    volume_status = GlusterCommands.volume_status(volumes, @args)
+  handle_metrics(["volume", "volume_status"]) do |metrics_data|
+    # Reset all Metrics to avoid stale data. Careful if
+    # counter type is used
+    clear_volume_metrics
 
-    grouped_data = volumes.group_by do |volume|
-      [volume.state, volume.type]
+    # If Volume Metrics are not enabled
+    next if !@@config.enabled?("volume")
+
+    grouped_data = metrics_data.volumes.group_by do |vol|
+      [vol.type, vol.state]
     end
 
-    # Group the data as {state, type} and export the count for each group
-    grouped_data.each do |key, value|
-      yield Crometheus::Sample.new(
-        value.size.to_f,
-        labels: {:cluster => @args.cluster_name,
-                 :state => key[0],
-                 :type => key[1]},
-        suffix: "count"
-      )
+    grouped_data.each do |data|
+      @@volume_count[cluster: @@config.cluster_name, type: data[0][0], state: data[0][1]].set data[1].size
     end
 
-    volumes.each do |volume|
-      yield Crometheus::Sample.new(
-        volume.distribute_count.to_f,
-        labels: {:cluster => @args.cluster_name, :name => volume.name},
-        suffix: "distribute_count"
-      )
+    puts metrics_data.volumes.to_json
 
-      yield Crometheus::Sample.new(
-        volume.brick_count.to_f,
-        labels: {:cluster => @args.cluster_name, :name => volume.name},
-        suffix: "brick_count"
-      )
+    metrics_data.volumes.each do |volume|
+      volume_labels = {
+        cluster: @@config.cluster_name,
+        type:    volume.type,
+        state:   volume.state,
+        name:    volume.name,
+      }
 
-      yield Crometheus::Sample.new(
-        volume.snapshot_count.to_f,
-        labels: {:cluster => @args.cluster_name, :name => volume.name},
-        suffix: "snapshot_count"
-      )
+      @@dist_count[**volume_labels].set(volume.distribute_count)
+      @@brick_count[**volume_labels].set(volume.brick_count)
+      @@snap_count[**volume_labels].set(volume.snapshot_count)
+      @@replica_count[**volume_labels].set(volume.replica_count)
+      @@arbiter_count[**volume_labels].set(volume.arbiter_count)
+      @@disperse_count[**volume_labels].set(volume.disperse_count)
+      @@subvol_count[**volume_labels].set(volume.subvols.size)
 
-      yield Crometheus::Sample.new(
-        volume.replica_count.to_f,
-        labels: {:cluster => @args.cluster_name, :name => volume.name},
-        suffix: "replica_count"
-      )
-
-      yield Crometheus::Sample.new(
-        volume.arbiter_count.to_f,
-        labels: {:cluster => @args.cluster_name, :name => volume.name},
-        suffix: "arbiter_count"
-      )
-
-      yield Crometheus::Sample.new(
-        volume.disperse_count.to_f,
-        labels: {:cluster => @args.cluster_name, :name => volume.name},
-        suffix: "disperse_count"
-      )
-    end
-
-    volume_status.each do |volume|
-      yield Crometheus::Sample.new(
-        volume.subvols.size.to_f,
-        labels: {:cluster => @args.cluster_name, :name => volume.name},
-        suffix: "subvol_count"
-      )
-
-      # volume_health (0 - Not Started, 1 - Down,
-      # 2 - Degraded, 3 - Partial, 4 - Up)
-      yield Crometheus::Sample.new(
-        health_to_value(volume.state, volume.health),
-        labels: {:cluster => @args.cluster_name,
-                 :name => volume.name,
-                 :type => volume.type,
-                 :state => volume.state},
-        suffix: "health"
-      )
-
-      yield Crometheus::Sample.new(
-        volume.up_subvols.to_f,
-        labels: {:cluster => @args.cluster_name,
-                 :name => volume.name,
-                 :type => volume.type,
-                 :state => volume.state},
-        suffix: "up_subvols"
-      )
-
-      yield Crometheus::Sample.new(
-        volume.size_used,
-        labels: {:cluster => @args.cluster_name,
-                 :name => volume.name,
-                 :type => volume.type,
-                 :state => volume.state},
-        suffix: "capacity_used_bytes"
-      )
-
-      yield Crometheus::Sample.new(
-        volume.size_free,
-        labels: {:cluster => @args.cluster_name,
-                 :name => volume.name,
-                 :type => volume.type,
-                 :state => volume.state},
-        suffix: "capacity_free_bytes"
-      )
-
-      yield Crometheus::Sample.new(
-        volume.size_total,
-        labels: {:cluster => @args.cluster_name,
-                 :name => volume.name,
-                 :type => volume.type,
-                 :state => volume.state},
-        suffix: "capacity_bytes"
-      )
-
-      yield Crometheus::Sample.new(
-        volume.inodes_used,
-        labels: {:cluster => @args.cluster_name,
-                 :name => volume.name,
-                 :type => volume.type,
-                 :state => volume.state},
-        suffix: "inodes_used_count"
-      )
-
-      yield Crometheus::Sample.new(
-        volume.inodes_free,
-        labels: {:cluster => @args.cluster_name,
-                 :name => volume.name,
-                 :type => volume.type,
-                 :state => volume.state},
-        suffix: "inodes_free_count"
-      )
-
-      yield Crometheus::Sample.new(
-        volume.inodes_total,
-        labels: {:cluster => @args.cluster_name,
-                 :name => volume.name,
-                 :type => volume.type,
-                 :state => volume.state},
-        suffix: "inodes_count"
-      )
-
-      volume.subvols.each_with_index do |subvol, sidx|
-        yield Crometheus::Sample.new(
-          subvol.bricks.size.to_f,
-          labels: {:cluster => @args.cluster_name,
-                   :name => volume.name,
-                   :subvol_index => "#{sidx}"},
-          suffix: "subvol_brick_count"
-        )
-
-        # volume_subvol_health (0 - Not Started, 1 - Down,
+      if volume.state == "Started" && @@config.enabled?("volume_status")
+        # volume_health (0 - Not Started, 1 - Down,
         # 2 - Degraded, 3 - Partial, 4 - Up)
-        yield Crometheus::Sample.new(
-          health_to_value(volume.state, subvol.health),
-          labels: {:cluster => @args.cluster_name,
-                   :name => volume.name,
-                   :state => volume.state,
-                   :type => subvol.type,
-                   :subvol_index => "#{sidx}"},
-          suffix: "subvol_health"
-        )
+        @@health[**volume_labels].set(health_to_value(volume.state, volume.health))
+        @@up_subvols[**volume_labels].set(volume.up_subvols)
+        @@size_used[**volume_labels].set(volume.size_used)
+        @@size_free[**volume_labels].set(volume.size_free)
+        @@size_total[**volume_labels].set(volume.size_total)
+        @@inodes_used[**volume_labels].set(volume.inodes_used)
+        @@inodes_free[**volume_labels].set(volume.inodes_free)
+        @@inodes_total[**volume_labels].set(volume.inodes_total)
+      end
+      volume.subvols.each_with_index do |subvol, sidx|
+        subvol_labels = {
+          cluster:      @@config.cluster_name,
+          volume_type:  volume.type,
+          volume_state: volume.state,
+          volume_name:  volume.name,
+          subvol_index: "#{sidx}",
+        }
 
-        yield Crometheus::Sample.new(
-          subvol.up_bricks.to_f,
-          labels: {:cluster => @args.cluster_name,
-                   :name => volume.name,
-                   :state => volume.state,
-                   :type => subvol.type,
-                   :subvol_index => "#{sidx}"},
-          suffix: "subvol_up_bricks"
-        )
+        @@subvol_brick_count[**subvol_labels].set(subvol.bricks.size)
 
-        yield Crometheus::Sample.new(
-          subvol.size_used,
-          labels: {:cluster => @args.cluster_name,
-                   :name => volume.name,
-                   :type => volume.type,
-                   :state => volume.state,
-                   :subvol_index => "#{sidx}"},
-          suffix: "subvol_capacity_used_bytes"
-        )
-
-        yield Crometheus::Sample.new(
-          subvol.size_free,
-          labels: {:cluster => @args.cluster_name,
-                   :name => volume.name,
-                   :type => volume.type,
-                   :state => volume.state,
-                   :subvol_index => "#{sidx}"},
-          suffix: "subvol_capacity_free_bytes"
-        )
-
-        yield Crometheus::Sample.new(
-          subvol.size_total,
-          labels: {:cluster => @args.cluster_name,
-                   :name => volume.name,
-                   :type => volume.type,
-                   :state => volume.state,
-                   :subvol_index => "#{sidx}"},
-          suffix: "subvol_capacity_bytes"
-        )
-
-        yield Crometheus::Sample.new(
-          subvol.inodes_used,
-          labels: {:cluster => @args.cluster_name,
-                   :name => volume.name,
-                   :type => volume.type,
-                   :state => volume.state,
-                   :subvol_index => "#{sidx}"},
-          suffix: "subvol_inodes_used_count"
-        )
-
-        yield Crometheus::Sample.new(
-          subvol.inodes_free,
-          labels: {:cluster => @args.cluster_name,
-                   :name => volume.name,
-                   :type => volume.type,
-                   :state => volume.state,
-                   :subvol_index => "#{sidx}"},
-          suffix: "subvol_inodes_free_count"
-        )
-
-        yield Crometheus::Sample.new(
-          subvol.inodes_total,
-          labels: {:cluster => @args.cluster_name,
-                   :name => volume.name,
-                   :type => volume.type,
-                   :state => volume.state,
-                   :subvol_index => "#{sidx}"},
-          suffix: "subvol_inodes_count"
-        )
+        if volume.state == "Started" && @@config.enabled?("volume_status")
+          # volume_subvol_health (0 - Not Started, 1 - Down,
+          # 2 - Degraded, 3 - Partial, 4 - Up)
+          @@subvol_health[**subvol_labels].set(health_to_value(volume.state, subvol.health))
+          @@subvol_up_bricks[**subvol_labels].set(subvol.up_bricks)
+          @@subvol_size_used[**subvol_labels].set(subvol.size_used)
+          @@subvol_size_free[**subvol_labels].set(subvol.size_free)
+          @@subvol_size_total[**subvol_labels].set(subvol.size_total)
+          @@subvol_inodes_used[**subvol_labels].set(subvol.inodes_used)
+          @@subvol_inodes_free[**subvol_labels].set(subvol.inodes_free)
+          @@subvol_inodes_total[**subvol_labels].set(subvol.inodes_total)
+        end
 
         subvol.bricks.each do |brick|
+          brick_labels = {
+            cluster:      @@config.cluster_name,
+            volume_name:  volume.name,
+            volume_type:  volume.type,
+            volume_state: volume.state,
+            hostname:     brick.node.hostname,
+            path:         brick.path,
+            subvol_index: "#{sidx}",
+          }
           # Report Brick Health only if started
-          if volume.state == "Started"
-            yield Crometheus::Sample.new(
-              brick.state,
-              labels: {:cluster => @args.cluster_name,
-                       :name => volume.name,
-                       :type => volume.type,
-                       :state => volume.state,
-                       :hostname => brick.node.hostname,
-                       :brick_path => brick.path,
-                       :subvol_index => "#{sidx}"},
-              suffix: "brick_health"
-            )
+          if volume.state == "Started" && @@config.enabled?("volume_status")
+            @@brick_health[**brick_labels].set(brick.state ? 1 : 0)
+
+            @@brick_size_used[**brick_labels].set(brick.size_used)
+            @@brick_size_free[**brick_labels].set(brick.size_free)
+            @@brick_size_total[**brick_labels].set(brick.size_total)
+            @@brick_inodes_used[**brick_labels].set(brick.inodes_used)
+            @@brick_inodes_free[**brick_labels].set(brick.inodes_free)
+            @@brick_inodes_total[**brick_labels].set(brick.inodes_total)
           end
-
-          yield Crometheus::Sample.new(
-            brick.size_used,
-            labels: {:cluster => @args.cluster_name,
-                     :name => volume.name,
-                     :type => volume.type,
-                     :state => volume.state,
-                     :hostname => brick.node.hostname,
-                     :brick_path => brick.path,
-                     :subvol_index => "#{sidx}"},
-            suffix: "brick_capacity_used_bytes"
-          )
-
-          yield Crometheus::Sample.new(
-            brick.size_free,
-            labels: {:cluster => @args.cluster_name,
-                     :name => volume.name,
-                     :type => volume.type,
-                     :state => volume.state,
-                     :hostname => brick.node.hostname,
-                     :brick_path => brick.path,
-                     :subvol_index => "#{sidx}"},
-            suffix: "brick_capacity_free_bytes"
-          )
-
-          yield Crometheus::Sample.new(
-            brick.size_total,
-            labels: {:cluster => @args.cluster_name,
-                     :name => volume.name,
-                     :type => volume.type,
-                     :state => volume.state,
-                     :hostname => brick.node.hostname,
-                     :brick_path => brick.path,
-                     :subvol_index => "#{sidx}"},
-            suffix: "brick_capacity_bytes"
-          )
-
-          yield Crometheus::Sample.new(
-            brick.inodes_used,
-            labels: {:cluster => @args.cluster_name,
-                     :name => volume.name,
-                     :type => volume.type,
-                     :state => volume.state,
-                     :hostname => brick.node.hostname,
-                     :brick_path => brick.path,
-                     :subvol_index => "#{sidx}"},
-            suffix: "brick_inodes_used_count"
-          )
-
-          yield Crometheus::Sample.new(
-            brick.inodes_free,
-            labels: {:cluster => @args.cluster_name,
-                     :name => volume.name,
-                     :type => volume.type,
-                     :state => volume.state,
-                     :hostname => brick.node.hostname,
-                     :brick_path => brick.path,
-                     :subvol_index => "#{sidx}"},
-            suffix: "brick_inodes_free_count"
-          )
-
-          yield Crometheus::Sample.new(
-            brick.inodes_total,
-            labels: {:cluster => @args.cluster_name,
-                     :name => volume.name,
-                     :type => volume.type,
-                     :state => volume.state,
-                     :hostname => brick.node.hostname,
-                     :brick_path => brick.path,
-                     :subvol_index => "#{sidx}"},
-            suffix: "brick_inodes_count"
-          )
         end
       end
     end
   end
 
-  def health_to_value(state, health)
+  def self.health_to_value(state, health)
     return 0.0 if state != "Started"
 
     case health
-    when HEALTH_DOWN
+    when GlusterCLI::HEALTH_DOWN
       1.0
-    when HEALTH_DEGRADED
+    when GlusterCLI::HEALTH_DEGRADED
       2.0
-    when HEALTH_PARTIAL
+    when GlusterCLI::HEALTH_PARTIAL
       3.0
-    when HEALTH_UP
+    when GlusterCLI::HEALTH_UP
       4.0
     else
       0.0

@@ -1,63 +1,51 @@
+require "crometheus"
+require "kemal"
+
+require "./config"
 require "./args"
-require "./metrics_server"
-require "./metrics/volume"
-require "./metrics/glusterd"
-require "./metrics/peer"
+require "./metrics/*"
 
+module GlusterMetricsExporter
+  # A handler to be called before calling Crometheus handler
+  class MetricsRunHandler < Kemal::Handler
+    def call(env)
+      # If route is not /metrics
+      return call_next(env) unless env.request.path == GlusterMetricsExporter.config.metrics_path
 
-def enabled_metrics(args)
-  metrics = [] of String
-  if args.disable_all_metrics
-    # If --disable-all is passed then enabled list
-    # will only have whatever passed as --enable
-    # For example --disable-all --enable "volume_status"
-    metrics = args.enabled_metrics
-  else
-    # When --disable is used to disable specific metrics
-    # So, all metrics enabled except the metrics passed as `--disable`
-    # For example --disable "volume_status"
-    MetricsServer.all_metrics.each do |metric|
-      if !args.disabled_metrics.includes?(metric)
-        metrics << metric
+      metrics_data = MetricsData.collect
+
+      # Call each handlers with metrics_data.
+      # Handlers will decide on which metrics to
+      # expose as Prometheus metrics
+      GlusterMetricsExporter.handlers.each do |handler|
+        handler.call(metrics_data)
       end
+
+      call_next(env)
     end
   end
 
-  metrics
-end
+  # Add handlers. First one will collect all the
+  # metrics and the second one will export the
+  # Prometheus metrics
+  add_handler MetricsRunHandler.new
+  add_handler Crometheus.default_registry.get_handler
 
-
-def main
-  args = parsed_args
-
-  # Register URL path
-  MetricsServer.default_registry.path = args.metrics_path
-  MetricsServer.cluster_metrics_registry.path = args.cluster_metrics_path
-
-  # List of enabled metrics
-  metrics_list = enabled_metrics(args)
-  if metrics_list.size == 0
-    STDERR.puts "No metrics enabled. Exiting.."
-    exit(1)
+  get "/metrics.json" do |env|
+    MetricsData.collect.to_json
   end
 
-  # Initialize each metric group based on the arguments passed
-  metrics_list.each do |metric|
-    case metric
-
-    when "volume"
-      VolumeMetrics.register(args)
-
-    when "glusterd"
-      GlusterdMetrics.register(args)
-
-    when "peer"
-      PeerMetrics.register(args)
-
-    end
+  get "/_api/local-metrics" do |env|
+    MetricsData.collect_local_metrics.to_json
   end
 
-  MetricsServer.start(args)
+  def self.run
+    parse_args
+
+    Crometheus.default_registry.path = @@config.metrics_path
+    Kemal.config.port = @@config.port
+    Kemal.run
+  end
 end
 
-main
+GlusterMetricsExporter.run
