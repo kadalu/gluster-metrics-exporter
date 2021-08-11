@@ -4,3 +4,23 @@ shards:
     git: https://github.com/darwinnn/crometheus.git
     version: 0.3.0+git.commit.8a748b734db4b80d5fd73d3c404cb2510eba3597
 
+  exception_page:
+    git: https://github.com/crystal-loot/exception_page.git
+    version: 0.1.5
+
+  glustercli:
+    git: https://github.com/aravindavk/glustercli-crystal.git
+    version: 0.1.0+git.commit.b213b433ff886cc063c7fa3a0214212a7fcee3f3
+
+  kemal:
+    git: https://github.com/kemalcr/kemal.git
+    version: 1.0.0
+
+  kilt:
+    git: https://github.com/jeromegn/kilt.git
+    version: 0.4.1
+
+  radix:
+    git: https://github.com/luislavena/radix.git
+    version: 0.4.1
+
