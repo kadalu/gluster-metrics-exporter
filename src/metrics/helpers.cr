@@ -34,7 +34,6 @@ module GlusterMetricsExporter
       # TODO: API calls concurrently
       data.peers.each do |peer|
         url = "http://#{peer.hostname}:#{GlusterMetricsExporter.config.port}/_api/local-metrics"
-        # TODO: Handle HTTP error and Connection refused errors
         begin
           response = HTTP::Client.get url
           if response.status_code == 200

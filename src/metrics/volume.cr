@@ -90,8 +90,6 @@ module GlusterMetricsExporter
       @@volume_count[cluster: @@config.cluster_name, type: data[0][0], state: data[0][1]].set data[1].size
     end
 
-    puts metrics_data.volumes.to_json
-
     metrics_data.volumes.each do |volume|
       volume_labels = {
         cluster: @@config.cluster_name,

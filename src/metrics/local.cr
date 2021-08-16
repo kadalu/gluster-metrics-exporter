@@ -77,7 +77,10 @@ module GlusterMetricsExporter
         hostname: peer.hostname,
       }
 
-      # TODO: Handle the case when Metrics exporter is down or error
+      @@exporter_health[**peer_labels].set(metrics_data.exporter_health[peer.hostname])
+
+      # If local metrics are not available
+      next unless metrics_data.local_metrics[peer.hostname]?
 
       @@node_uptime_seconds[**peer_labels].set(metrics_data.local_metrics[peer.hostname].node_uptime_seconds)
 
@@ -102,8 +105,6 @@ module GlusterMetricsExporter
       @@exporter_cpu_percentage[**peer_labels].set(exporter_metrics.cpu_percentage)
       @@exporter_memory_percentage[**peer_labels].set(exporter_metrics.memory_percentage)
       @@exporter_uptime_seconds[**peer_labels].set(exporter_metrics.uptime_seconds)
-
-      @@exporter_health[**peer_labels].set(metrics_data.exporter_health[peer.hostname])
     end
   end
 end

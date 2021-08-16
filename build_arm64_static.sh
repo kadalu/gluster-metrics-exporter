@@ -3,7 +3,7 @@
 # Based on https://gist.github.com/j8r/34f1a344336901960c787517b5b6d616
 
 LOCAL_PROJECT_PATH=${1-$PWD}
-VERSION=${VERSION-master}
+VERSION=`shards version`
 CMDS="
 echo '@edge http://dl-cdn.alpinelinux.org/alpine/edge/community' >>/etc/apk/repositories
 apk add --update --no-cache --force-overwrite \
@@ -14,7 +14,8 @@ apk add --update --no-cache --force-overwrite \
     llvm10-dev llvm10-static g++ \
     shards@edge \
     yaml-static
-shards install
+shards install --production
+shards update
 VERSION=${VERSION} time -v shards build --static --release --stats --time
 chown 1000:1000 -R bin
 mv bin/gluster-metrics-exporter bin/gluster-metrics-exporter-arm64
