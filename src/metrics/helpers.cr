@@ -6,7 +6,8 @@ module GlusterMetricsExporter
 
     property volumes = [] of GlusterCLI::VolumeInfo,
       peers = [] of GlusterCLI::NodeInfo,
-      local_metrics = Hash(String, GlusterCLI::LocalMetrics).new
+      local_metrics = Hash(String, GlusterCLI::LocalMetrics).new,
+      exporter_health = Hash(String, Int32).new
 
     def self.collect
       data = MetricsData.new
@@ -34,9 +35,20 @@ module GlusterMetricsExporter
       data.peers.each do |peer|
         url = "http://#{peer.hostname}:#{GlusterMetricsExporter.config.port}/_api/local-metrics"
         # TODO: Handle HTTP error and Connection refused errors
-        response = HTTP::Client.get url
-
-        data.local_metrics[peer.hostname] = GlusterCLI::LocalMetrics.from_json(response.body)
+        begin
+          response = HTTP::Client.get url
+          if response.status_code == 200
+            data.local_metrics[peer.hostname] = GlusterCLI::LocalMetrics.from_json(response.body)
+            data.exporter_health[peer.hostname] = 2
+            next
+          else
+            # Exporter is Up but error
+            data.exporter_health[peer.hostname] = 1
+          end
+        rescue Socket::ConnectError
+          # Exporter is Offline
+          data.exporter_health[peer.hostname] = 0
+        end
       end
 
       data
