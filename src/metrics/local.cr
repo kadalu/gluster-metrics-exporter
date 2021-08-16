@@ -16,6 +16,11 @@ module GlusterMetricsExporter
   @@shd_memory_percentage = ShdGauge.new(:shd_memory_percentage, "Self Heal Daemon Memory Percentage")
   @@shd_uptime_seconds = ShdGauge.new(:shd_uptime_seconds, "Self Heal Daemon Uptime in Seconds")
 
+  @@exporter_cpu_percentage = PeerGauge.new(:exporter_cpu_percentage, "Metrics Exporter CPU Percentage")
+  @@exporter_memory_percentage = PeerGauge.new(:exporter_memory_percentage, "Metrics Exporter Memory Percentage")
+  @@exporter_uptime_seconds = PeerGauge.new(:exporter_uptime_seconds, "Metrics Exporter Uptime in Seconds")
+  @@exporter_health = PeerGauge.new(:exporter_health, "Metrics Exporter Health")
+
   def self.clear_local_metrics
     @@brick_cpu_percentage.clear
     @@brick_memory_percentage.clear
@@ -28,6 +33,10 @@ module GlusterMetricsExporter
     @@shd_uptime_seconds.clear
     @@node_uptime_seconds.clear
     @@log_dir_size_bytes.clear
+    @@exporter_cpu_percentage.clear
+    @@exporter_memory_percentage.clear
+    @@exporter_uptime_seconds.clear
+    @@exporter_health.clear
   end
 
   handle_metrics(["local_metrics"]) do |metrics_data|
@@ -68,6 +77,8 @@ module GlusterMetricsExporter
         hostname: peer.hostname,
       }
 
+      # TODO: Handle the case when Metrics exporter is down or error
+
       @@node_uptime_seconds[**peer_labels].set(metrics_data.local_metrics[peer.hostname].node_uptime_seconds)
 
       log_labels = peer_labels.merge({path: "/var/log/glusterfs"})
@@ -86,6 +97,13 @@ module GlusterMetricsExporter
         @@shd_memory_percentage[**shd_labels].set(shd.memory_percentage)
         @@shd_uptime_seconds[**shd_labels].set(shd.uptime_seconds)
       end
+
+      exporter_metrics = metrics_data.local_metrics[peer.hostname].exporter
+      @@exporter_cpu_percentage[**peer_labels].set(exporter_metrics.cpu_percentage)
+      @@exporter_memory_percentage[**peer_labels].set(exporter_metrics.memory_percentage)
+      @@exporter_uptime_seconds[**peer_labels].set(exporter_metrics.uptime_seconds)
+
+      @@exporter_health[**peer_labels].set(metrics_data.exporter_health[peer.hostname])
     end
   end
 end
