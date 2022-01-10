@@ -1,24 +1,28 @@
 version: 2.0
 shards:
+  backtracer:
+    git: https://github.com/sija/backtracer.cr.git
+    version: 1.2.1
+
   crometheus:
     git: https://github.com/darwinnn/crometheus.git
     version: 0.3.0+git.commit.8a748b734db4b80d5fd73d3c404cb2510eba3597
 
   exception_page:
     git: https://github.com/crystal-loot/exception_page.git
-    version: 0.1.5
+    version: 0.2.1
 
   glustercli:
     git: https://github.com/aravindavk/glustercli-crystal.git
-    version: 0.1.0+git.commit.4be36de4380fefc888b795cd705dab72d4b8a4b9
+    version: 0.1.1+git.commit.d41b387dd47615de965411218fbd3e756de14f37
 
   kemal:
     git: https://github.com/kemalcr/kemal.git
-    version: 1.0.0
+    version: 1.1.0
 
   kilt:
     git: https://github.com/jeromegn/kilt.git
-    version: 0.4.1
+    version: 0.6.1
 
   radix:
     git: https://github.com/luislavena/radix.git
