@@ -42,7 +42,7 @@ jobs:
       - name: Build
         working-directory: .
         run: |
-          docker run -i -v `pwd`:/workspace -w /workspace --rm multiarch/alpine:aarch64-latest-stable /bin/sh -c "echo '@edge http://dl-cdn.alpinelinux.org/alpine/edge/community' >>/etc/apk/repositories; apk add --update --no-cache --force-overwrite crystal@edge gc-dev gcc gmp-dev libatomic_ops libevent-static musl-dev pcre-dev libxml2-dev openssl-dev openssl-libs-static tzdata yaml-dev zlib-static make git llvm10-dev llvm10-static g++ shards@edge yaml-static; shards build --production --release --static --no-debug --stats --time"
+          docker run -i -v `pwd`:/workspace -w /workspace --rm multiarch/alpine:aarch64-edge /bin/sh -c "echo '@edge http://dl-cdn.alpinelinux.org/alpine/edge/community' >>/etc/apk/repositories; apk add --update --no-cache --force-overwrite llvm12-dev llvm12-static crystal@edge gc-dev gcc gmp-dev libatomic_ops libevent-static musl-dev pcre-dev libxml2-dev openssl-dev openssl-libs-static tzdata yaml-dev zlib-static make git g++ shards@edge yaml-static; shards build --production --release --static --no-debug --stats --time"
       - name: Rename
         run: |
           sudo mv bin/gluster-metrics-exporter bin/gluster-metrics-exporter-arm64
