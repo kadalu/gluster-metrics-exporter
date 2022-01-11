@@ -10,7 +10,7 @@ module GlusterMetricsExporter
       gluster_executable_path = "/usr/sbin/gluster",
       disable_all_metrics = false,
       log_level = "info",
-      log_dir = "/var/log/glusterfs-metrics",
+      log_dir = "/var/log/gluster-metrics-exporter",
       log_file = "exporter.log",
       gluster_log_dir = "/var/log/glusterfs",
       glusterd_dir = "/var/lib/glusterd",

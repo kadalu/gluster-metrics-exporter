@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 PIDFile=/var/run/gluster/metrics-exporter.pid
-ExecStart=/usr/bin/gluster-metrics-exporter
+ExecStart=/usr/sbin/gluster-metrics-exporter
 
 [Install]
 WantedBy=multi-user.target

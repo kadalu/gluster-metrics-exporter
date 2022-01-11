@@ -1,3 +1,5 @@
+require "log"
+
 require "crometheus"
 require "kemal"
 
@@ -6,6 +8,29 @@ require "./args"
 require "./metrics/*"
 
 module GlusterMetricsExporter
+  class ExporterAPILogHandler < Kemal::BaseLogHandler
+    def initialize
+    end
+
+    def call(context : HTTP::Server::Context)
+      elapsed_time = Time.measure { call_next(context) }
+      elapsed_text = elapsed_text(elapsed_time)
+      Log.info &.emit("#{context.request.method} #{context.request.resource}", status_code: "#{context.response.status_code}", duration: "#{elapsed_text}")
+      context
+    end
+
+    def write(message : String)
+      Log.info { message.strip }
+    end
+
+    private def elapsed_text(elapsed)
+      millis = elapsed.total_milliseconds
+      return "#{millis.round(2)}ms" if millis >= 1
+
+      "#{(millis * 1000).round(2)}µs"
+    end
+  end
+
   # A handler to be called before calling Crometheus handler
   class MetricsRunHandler < Kemal::Handler
     def call(env)
@@ -42,8 +67,14 @@ module GlusterMetricsExporter
   def self.run
     parse_args
 
+    Dir.mkdir_p @@config.log_dir
+    logfile = Path[@@config.log_dir].join(@@config.log_file)
+    # TODO: Handle Log level from CLI arg
+    Log.setup(:info, Log::IOBackend.new(File.new(logfile, "a+")))
+
     Crometheus.default_registry.path = @@config.metrics_path
     Kemal.config.port = @@config.port
+    Kemal.config.logger = ExporterAPILogHandler.new
     Kemal.run
   end
 end
