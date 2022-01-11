@@ -1,5 +1,5 @@
 name: gluster-metrics-exporter
-version: 0.2.0
+version: 0.2.4
 
 authors:
   - Kadalu.io <engineering@kadalu.io>
@@ -22,4 +22,4 @@ targets:
   gluster-metrics-exporter:
     main: src/gluster-metrics-exporter.cr
 
-license: Apache-2.0
+license: GPLv3
