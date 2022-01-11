@@ -12,6 +12,7 @@ module GlusterMetricsExporter
       log_level = "info",
       log_dir = "/var/log/glusterfs-metrics",
       log_file = "exporter.log",
+      gluster_log_dir = "/var/log/glusterfs",
       glusterd_dir = "/var/lib/glusterd",
       gluster_cli_socket_path = "",
       verbose = false,
