@@ -124,8 +124,15 @@ module GlusterMetricsExporter
     end
 
     if @@config.gluster_host == ""
-      STDERR.puts "--gluster-host=<HOST> is required. This hostname will be used to replace the localhost references from a few Gluster commands(Like pool list)."
-      exit 1
+      gluster_hostname_file = Path.new(@@config.glusterd_dir, "hostname")
+
+      # If hostname file is present in /var/lib/glusterd/ then use that
+      # as hostname for this node. Else use the output of the hostname command.
+      if File.exists?(gluster_hostname_file)
+        @@config.gluster_host = File.read(gluster_hostname_file).strip
+      else
+        @@config.gluster_host = `hostname`.strip
+      end
     end
 
     set_enabled_metrics
