@@ -1,8 +1,8 @@
 module GlusterMetricsExporter
-  Crometheus.alias VolumeCountGauge = Crometheus::Gauge[:cluster, :type, :state]
-  Crometheus.alias VolumeGauge = Crometheus::Gauge[:cluster, :type, :state, :name]
-  Crometheus.alias SubvolumeGauge = Crometheus::Gauge[:cluster, :volume_type, :volume_state, :volume_name, :subvol_index]
-  Crometheus.alias BrickGauge = Crometheus::Gauge[:cluster, :volume_type, :volume_state, :volume_name, :subvol_index, :hostname, :path]
+  Crometheus.alias VolumeCountGauge = Crometheus::Gauge[:type, :state]
+  Crometheus.alias VolumeGauge = Crometheus::Gauge[:type, :state, :name]
+  Crometheus.alias SubvolumeGauge = Crometheus::Gauge[:volume_type, :volume_state, :volume_name, :subvol_index]
+  Crometheus.alias BrickGauge = Crometheus::Gauge[:volume_type, :volume_state, :volume_name, :subvol_index, :hostname, :path]
 
   @@volume_count = VolumeCountGauge.new(:volume_count, "Number of Volumes")
   @@dist_count = VolumeGauge.new(:volume_distribute_count, "Distribute Count")
@@ -87,12 +87,11 @@ module GlusterMetricsExporter
     end
 
     grouped_data.each do |data|
-      @@volume_count[cluster: @@config.cluster_name, type: data[0][0], state: data[0][1]].set data[1].size
+      @@volume_count[type: data[0][0], state: data[0][1]].set data[1].size
     end
 
     metrics_data.volumes.each do |volume|
       volume_labels = {
-        cluster: @@config.cluster_name,
         type:    volume.type,
         state:   volume.state,
         name:    volume.name,
@@ -120,7 +119,6 @@ module GlusterMetricsExporter
       end
       volume.subvols.each_with_index do |subvol, sidx|
         subvol_labels = {
-          cluster:      @@config.cluster_name,
           volume_type:  volume.type,
           volume_state: volume.state,
           volume_name:  volume.name,
@@ -144,7 +142,6 @@ module GlusterMetricsExporter
 
         subvol.bricks.each do |brick|
           brick_labels = {
-            cluster:      @@config.cluster_name,
             volume_name:  volume.name,
             volume_type:  volume.type,
             volume_state: volume.state,

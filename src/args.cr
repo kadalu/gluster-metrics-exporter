@@ -20,9 +20,8 @@ module GlusterMetricsExporter
         @@config.port = port.to_i
       end
 
-      parser.on("--cluster=NAME", "Cluster identifier") do |name|
-        @@config.cluster_name = name
-      end
+      # Kept this argument so that existing deployments don't fail
+      parser.on("--cluster=NAME", "Cluster identifier") {|_|}
 
       parser.on("--gluster-host=NAME", "Gluster Host to replace `localhost` from the peer command output (default: #{default_gluster_host})") do |name|
         @@config.gluster_host = name
@@ -122,11 +121,6 @@ module GlusterMetricsExporter
       end
 
       @@config = Config.from_yaml(File.read(config_file))
-    end
-
-    if @@config.cluster_name == ""
-      STDERR.puts "`--cluster=<NAME>` is required to differenciate metrics from multiple Clusters"
-      exit 1
     end
 
     if @@config.gluster_host == ""
