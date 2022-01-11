@@ -15,7 +15,6 @@ module GlusterMetricsExporter
       glusterd_dir = "/var/lib/glusterd",
       gluster_cli_socket_path = "",
       verbose = false,
-      cluster_name = "",
       gluster_host = "",
       disabled_volumes = [] of String,
       enabled_volumes = [] of String,

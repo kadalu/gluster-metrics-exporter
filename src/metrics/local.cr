@@ -1,6 +1,6 @@
 module GlusterMetricsExporter
-  Crometheus.alias ShdGauge = Crometheus::Gauge[:cluster, :hostname, :volume_name]
-  Crometheus.alias LogGauge = Crometheus::Gauge[:cluster, :hostname, :path]
+  Crometheus.alias ShdGauge = Crometheus::Gauge[:hostname, :volume_name]
+  Crometheus.alias LogGauge = Crometheus::Gauge[:hostname, :path]
 
   @@brick_cpu_percentage = BrickGauge.new(:brick_cpu_percentage, "Brick CPU Percentage")
   @@brick_memory_percentage = BrickGauge.new(:brick_memory_percentage, "Brick Memory Percentage")
@@ -51,7 +51,6 @@ module GlusterMetricsExporter
       volume.subvols.each_with_index do |subvol, sidx|
         subvol.bricks.each do |brick|
           brick_labels = {
-            cluster:      @@config.cluster_name,
             volume_name:  volume.name,
             volume_type:  volume.type,
             volume_state: volume.state,
@@ -73,7 +72,6 @@ module GlusterMetricsExporter
 
     metrics_data.peers.each do |peer|
       peer_labels = {
-        cluster:  @@config.cluster_name,
         hostname: peer.hostname,
       }
 
