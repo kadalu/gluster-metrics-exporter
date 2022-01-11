@@ -55,7 +55,7 @@ module GlusterMetricsExporter
 
     def self.collect_local_metrics
       cli = GlusterCLI::CLI.new
-      cli.local_metrics
+      cli.local_metrics(log_dir: GlusterMetricsExporter.config.gluster_log_dir)
     end
 
     def initialize

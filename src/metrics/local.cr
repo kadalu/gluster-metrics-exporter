@@ -82,7 +82,7 @@ module GlusterMetricsExporter
 
       @@node_uptime_seconds[**peer_labels].set(metrics_data.local_metrics[peer.hostname].node_uptime_seconds)
 
-      log_labels = peer_labels.merge({path: "/var/log/glusterfs"})
+      log_labels = peer_labels.merge({path: GlusterMetricsExporter.config.gluster_log_dir})
       @@log_dir_size_bytes[**log_labels].set(metrics_data.local_metrics[peer.hostname].log_dir_size_bytes)
 
       gd_metrics = metrics_data.local_metrics[peer.hostname].glusterd

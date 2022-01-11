@@ -67,6 +67,10 @@ module GlusterMetricsExporter
         @@config.log_file = name
       end
 
+      parser.on("--gluster-log-dir=DIR", "Gluster Log directory (default: #{@@config.gluster_log_dir})") do |name|
+        @@config.gluster_log_dir = name
+      end
+
       parser.on("--glusterd-dir=DIR", "Glusterd directory (default: #{@@config.glusterd_dir})") do |name|
         @@config.glusterd_dir = name
       end
