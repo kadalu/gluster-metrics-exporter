@@ -5,19 +5,7 @@
 Download the latest release with the command
 
 ```
-curl -L https://github.com/kadalu/gluster-metrics-exporter/releases/latest/download/gluster-metrics-exporter-`uname -m | sed 's|aarch64|arm64|' | sed 's|x86_64|amd64|'` -o gluster-metrics-exporter
-```
-
-Make the `gluster-metrics-exporter` binary executable.
-
-```
-chmod +x ./gluster-metrics-exporter
-```
-
-Move the binary in to your PATH.
-
-```
-sudo mv ./gluster-metrics-exporter /usr/local/bin/gluster-metrics-exporter
+$ curl -fsSL https://github.com/kadalu/gluster-metrics-exporter/releases/latest/download/install.sh | sudo bash -x
 ```
 
 Test to ensure the version you installed is up-to-date
@@ -27,6 +15,39 @@ $ gluster-metrics-exporter --version
 ```
 
 ## Usage:
+
+Start the Gluster Metrics exporter service in all the Storage nodes
+
+```
+# systemctl enable gluster-metrics-exporter
+# systemctl start gluster-metrics-exporter
+```
+
+Above command picks up the Gluster hostname by running the `hostname` command. If the local Gluster hostname is different than create a hostname file in `/var/lib/glusterd`.
+
+```
+# echo "server1.example.com" > /var/lib/glusterd/hostname
+```
+
+To fetch the Prometheus compatible Metrics, call the API from any one Storage node.
+
+```
+$ curl http://server1.example.com:9713/metrics
+```
+
+To get the same metrics in JSON format
+
+```
+$ curl http://server1.example.com:9713/metrics.json
+```
+
+## Manually run the exporter (Without systemd)
+
+```
+# gluster-metrics-exporter
+```
+
+Available options
 
 ```
 Usage: gluster-metrics-exporter [OPTIONS]
