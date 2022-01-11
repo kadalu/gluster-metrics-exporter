@@ -1,0 +1,14 @@
+name: lint
+version: 0.1.0
+
+authors:
+  - Kadalu.io <engineering@kadalu.io>
+
+description: |
+  To install Lint tool Ameba
+
+license: GPLv3
+
+development_dependencies:
+  ameba:
+    github: crystal-ameba/ameba
