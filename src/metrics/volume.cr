@@ -92,9 +92,9 @@ module GlusterMetricsExporter
 
     metrics_data.volumes.each do |volume|
       volume_labels = {
-        type:    volume.type,
-        state:   volume.state,
-        name:    volume.name,
+        type:  volume.type,
+        state: volume.state,
+        name:  volume.name,
       }
 
       @@dist_count[**volume_labels].set(volume.distribute_count)

@@ -9,7 +9,7 @@ module GlusterMetricsExporter
     config_file = ""
     default_gluster_host = `hostname`.strip
 
-    parser = OptionParser.new do |parser|
+    OptionParser.new do |parser|
       parser.banner = "Usage: #{PROGNAME} [OPTIONS]"
 
       parser.on("--metrics-path=URL", "Metrics Path (default: #{@@config.metrics_path})") do |url|
@@ -21,7 +21,7 @@ module GlusterMetricsExporter
       end
 
       # Kept this argument so that existing deployments don't fail
-      parser.on("--cluster=NAME", "Cluster identifier") {|_|}
+      parser.on("--cluster=NAME", "Cluster identifier") { |_| }
 
       parser.on("--gluster-host=NAME", "Gluster Host to replace `localhost` from the peer command output (default: #{default_gluster_host})") do |name|
         @@config.gluster_host = name

@@ -31,11 +31,11 @@ module GlusterMetricsExporter
   add_handler MetricsRunHandler.new
   add_handler Crometheus.default_registry.get_handler
 
-  get "/metrics.json" do |env|
+  get "/metrics.json" do
     MetricsData.collect.to_json
   end
 
-  get "/_api/local-metrics" do |env|
+  get "/_api/local-metrics" do
     MetricsData.collect_local_metrics.to_json
   end
 
