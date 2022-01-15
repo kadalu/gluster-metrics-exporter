@@ -14,7 +14,7 @@ shards:
 
   glustercli:
     git: https://github.com/aravindavk/glustercli-crystal.git
-    version: 0.1.3+git.commit.9bdda6857ac932973ba4fb4904b441214652a1c3
+    version: 0.1.4+git.commit.4350f1cf558c7c4d27722addf11369a2ccae5f87
 
   kemal:
     git: https://github.com/kemalcr/kemal.git
