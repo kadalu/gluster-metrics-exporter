@@ -2,7 +2,7 @@ require "option_parser"
 require "yaml"
 
 PROGNAME = "gluster-metrics-exporter"
-VERSION  = {{ `shards version #{__DIR__}`.chomp.stringify }}
+VERSION  = {{ env("VERSION") && env("VERSION") != "" ? env("VERSION") : `git describe --always --tags --match "[0-9]*" --dirty`.chomp.stringify }}
 
 module GlusterMetricsExporter
   def self.parse_args
