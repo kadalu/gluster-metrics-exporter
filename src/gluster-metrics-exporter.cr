@@ -50,6 +50,9 @@ module GlusterMetricsExporter
     end
   end
 
+  # Add Namespace so that each metrics prefixed with glusterfs_
+  Crometheus.default_registry.namespace = "glusterfs"
+
   # Add handlers. First one will collect all the
   # metrics and the second one will export the
   # Prometheus metrics
