@@ -1,13 +1,23 @@
 require "glustercli"
 
 module GlusterMetricsExporter
+  struct MetricError
+    include JSON::Serializable
+
+    property name = ""
+
+    def initialize(@name)
+    end
+  end
+
   class MetricsData
     include JSON::Serializable
 
     property volumes = [] of GlusterCLI::VolumeInfo,
       peers = [] of GlusterCLI::NodeInfo,
       local_metrics = Hash(String, GlusterCLI::LocalMetrics).new,
-      exporter_health = Hash(String, Int32).new
+      exporter_health = Hash(String, Int32).new,
+      errors = [] of MetricError
 
     def self.collect
       data = MetricsData.new
@@ -24,11 +34,21 @@ module GlusterMetricsExporter
           status_collect = true
         end
 
-        data.volumes = cli.list_volumes(status: status_collect)
+        begin
+          data.volumes = cli.list_volumes(status: status_collect)
+        rescue ex : GlusterCLI::CommandException
+          data.errors << MetricError.new("list_volumes")
+          Log.error &.emit("Error while collecting the Volumes metrics", error: ex.message)
+        end
       end
 
       if GlusterMetricsExporter.config.enabled?("peer")
-        data.peers = cli.list_peers
+        begin
+          data.peers = cli.list_peers
+        rescue ex : GlusterCLI::CommandException
+          data.errors << MetricError.new("list_peers")
+          Log.error &.emit("Error while collecting the Peers metrics", error: ex.message)
+        end
       end
 
       # TODO: API calls concurrently

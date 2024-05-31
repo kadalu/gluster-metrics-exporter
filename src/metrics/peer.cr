@@ -20,7 +20,7 @@ module GlusterMetricsExporter
 
     metrics_data.peers.each do |peer|
       # Peer State 1 => Connected, 0 => Disconnected/Unknown
-      state = peer.connected ? 1 : 0
+      state = peer.connected? ? 1 : 0
       @@peer_state[hostname: peer.hostname].set(state)
     end
   end
