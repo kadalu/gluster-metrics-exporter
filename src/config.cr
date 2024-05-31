@@ -6,22 +6,23 @@ module GlusterMetricsExporter
 
     property metrics_path = "/metrics",
       port = 9713,
-      disable_volumes_all = false,
       gluster_executable_path = "/usr/sbin/gluster",
-      disable_all_metrics = false,
       log_level = "info",
       log_dir = "/var/log/gluster-metrics-exporter",
       log_file = "exporter.log",
       gluster_log_dir = "/var/log/glusterfs",
       glusterd_dir = "/var/lib/glusterd",
       gluster_cli_socket_path = "",
-      verbose = false,
       gluster_host = "",
       disabled_volumes = [] of String,
       enabled_volumes = [] of String,
       disabled_metrics = [] of String,
       enabled_metrics = [] of String,
       all_metrics = [] of String
+
+    property? verbose = false,
+      disable_volumes_all = false,
+      disable_all_metrics = false
 
     def initialize
     end
@@ -35,7 +36,7 @@ module GlusterMetricsExporter
 
   def self.set_enabled_metrics
     metrics = [] of String
-    if @@config.disable_all_metrics
+    if @@config.disable_all_metrics?
       # If --disable-all is passed then enabled list
       # will only have whatever passed as --enable
       # For example --disable-all --enable "volume_status"

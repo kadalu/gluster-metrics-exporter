@@ -5,7 +5,7 @@ fmt-check:
 
 lint:
 	cd lint && shards install
-	./lint/bin/ameba src
+	./lint/bin/ameba --except Documentation/DocumentationAdmonition src
 
 fmt:
 	crystal tool format src

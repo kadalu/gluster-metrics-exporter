@@ -27,15 +27,15 @@ module GlusterMetricsExporter
         @@config.gluster_host = name
       end
 
-      parser.on("-v", "--verbose", "Enable verbose output (default: #{@@config.verbose})") do
+      parser.on("-v", "--verbose", "Enable verbose output (default: #{@@config.verbose?})") do
         @@config.verbose = true
       end
 
-      parser.on("--disable-all", "Disable all Metrics (default: #{@@config.disable_all_metrics})") do
+      parser.on("--disable-all", "Disable all Metrics (default: #{@@config.disable_all_metrics?})") do
         @@config.disable_all_metrics = true
       end
 
-      parser.on("--disable-volumes-all", "Disable all Volumes (default: #{@@config.disable_volumes_all})") do
+      parser.on("--disable-volumes-all", "Disable all Volumes (default: #{@@config.disable_volumes_all?})") do
         @@config.disable_volumes_all = true
       end
 
