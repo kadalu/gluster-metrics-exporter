@@ -5,6 +5,7 @@ module GlusterMetricsExporter
     include YAML::Serializable
 
     property metrics_path = "/metrics",
+      host_binding = "0.0.0.0",
       port = 9713,
       gluster_executable_path = "/usr/sbin/gluster",
       log_level = "info",

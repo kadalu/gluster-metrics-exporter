@@ -77,6 +77,7 @@ module GlusterMetricsExporter
 
     Crometheus.default_registry.path = @@config.metrics_path
     Kemal.config.port = @@config.port
+    Kemal.config.host_binding = @@config.host_binding
     Kemal.config.logger = ExporterAPILogHandler.new
     Kemal.run
   end
