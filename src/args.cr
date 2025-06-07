@@ -16,6 +16,10 @@ module GlusterMetricsExporter
         @@config.metrics_path = url
       end
 
+      parser.on("--host-binding=HOST", "Bind to specific IP address (default: #{@@config.host_binding})") do |host|
+        @@config.host_binding = host
+      end
+
       parser.on("-p PORT", "--port=PORT", "Exporter Port (default: #{@@config.port})") do |port|
         @@config.port = port.to_i
       end

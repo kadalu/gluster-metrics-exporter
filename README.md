@@ -52,6 +52,7 @@ Available options
 ```
 Usage: gluster-metrics-exporter [OPTIONS]
     --metrics-path=URL               Metrics Path (default: /metrics)
+    --host-binding                   Exporter bind address (default: 0.0.0.0)
     -p PORT, --port=PORT             Exporter Port (default: 9713)
     --cluster=NAME                   Cluster identifier
     --gluster-host=NAME              Gluster Host to replace `localhost` from the peer command output (default: hostname)
